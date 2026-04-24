@@ -1,0 +1,69 @@
+# .gitignore — project-agnostic template defaults.
+# Each concrete project will extend this with language-specific entries.
+
+# ======================================================================
+# Editor / IDE
+# ======================================================================
+.idea/
+.idea_modules/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.sublime-*
+.history/
+.DS_Store
+Thumbs.db
+
+# ======================================================================
+# Build outputs (language-agnostic aliases; enable as your stack demands)
+# ======================================================================
+/build
+/dist
+/out
+/target
+/.gradle
+/node_modules
+/coverage
+/htmlcov
+.pytest_cache
+*.pyc
+__pycache__/
+*.egg-info/
+*.log
+
+# ======================================================================
+# Claude Code — commit the symlinks + a handful of shared files.
+# Everything else under .claude/ (settings.local.json, per-machine state)
+# stays local.
+# ======================================================================
+# Note: a trailing-slash ignore on the parent (`.claude/`) would make
+# `!` re-includes ineffective — git refuses to re-examine files inside
+# an ignored directory. So we ignore individual files under .claude/
+# instead, with explicit re-includes for the shared ones.
+.claude/*
+!.claude/setup_claude_dir.sh
+!.claude/settings.json
+# Symlinks are added with `git add -f` by the setup script, so the
+# re-includes above aren't strictly needed for them. But being
+# explicit here makes `.claude/` less mysterious for a new reader.
+!.claude/agents
+!.claude/guides
+!.claude/hooks
+!.claude/scripts
+!.claude/skills
+
+# ======================================================================
+# Secrets — never commit
+# ======================================================================
+/.secrets/
+/secrets/
+*.pem
+*.key
+
+# Per-machine developer files
+.env
+.env.local
+.env.*.local
+gradle.properties.local
+options.txt

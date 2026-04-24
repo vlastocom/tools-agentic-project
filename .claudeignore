@@ -1,0 +1,38 @@
+# .claudeignore — paths that Claude Code must not read or write.
+# Treat this like .gitignore but specifically for agent access.
+
+# Secrets and credentials — never expose to an agent
+/.secrets
+/secrets
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+*.p12
+*.pfx
+
+# Local-only / per-developer files that may carry secrets
+.env
+.env.local
+.env.*.local
+gradle.properties.local
+options.txt
+/secrets/*.txt
+
+# Large generated artefacts that burn tokens for no reason
+/node_modules
+/dist
+/build
+/.gradle
+/target
+/coverage
+/test-results
+/playwright-report
+
+# IDE state
+/.idea
+/.vscode
+
+# OS / miscellany
+.DS_Store
+Thumbs.db

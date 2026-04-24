@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "TaskCreate",
+      "TaskUpdate",
+      "TaskList",
+      "TaskGet",
+      "TaskOutput",
+      "TaskStop",
+      "Agent",
+      "EnterWorktree",
+      "ExitWorktree",
+      "EnterPlanMode",
+      "ExitPlanMode",
+      "AskUserQuestion"
+    ],
+    "additionalDirectories": [
+      "/tmp"
+    ]
+  }
+}
