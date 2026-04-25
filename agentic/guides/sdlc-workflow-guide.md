@@ -162,7 +162,7 @@ any time to see sprint state without scrolling conversation:
 
 ### 3.4 Sprint coverage summary
 
-`docs/sprints/<sprint-id>-coverage.md` — produced by the orchestrator as its
+`docs/sprints/<sprint-id>.coverage.md` — produced by the orchestrator as its
 final act before handing back to the operator. Self-contained reading:
 
 - Per-source-set (unit / integration) coverage numbers + HTML link
@@ -352,7 +352,7 @@ After each task completes, the orchestrator:
 
 When **all** tasks are wrapped or failed-out, the orchestrator:
 
-1. Generates `docs/sprints/<sprint-id>-coverage.md`
+1. Generates `docs/sprints/<sprint-id>.coverage.md`
 2. Writes the final state to the sprint log
 3. Hands back to the operator with a single line: "Sprint X ready for review."
 
@@ -460,7 +460,7 @@ Coverage summary and sprint log exist.
      sprint goals? Read from sprint log + coverage.
    - **Task-by-task**: for each `.complete.md`, summarise delivered change
      + any decisions or deviations. Operator skims in depth or skips.
-   - **Coverage summary** — operator reads `<sprint-id>-coverage.md`
+   - **Coverage summary** — operator reads `<sprint-id>.coverage.md`
      alongside the skill; any dip gets attention.
    - **E2E flows** — explicit walk-through of E2E specs run, per spec:
      what the flow covered, outcome, any flake.
