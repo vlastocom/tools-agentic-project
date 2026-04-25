@@ -22,6 +22,20 @@ adjacent services — and record the outcome.
 - The database-scripts guide's `dev/integration-test/` conventions
   (if the project has a DB) for per-class cleanup scripts.
 
+## Pre-flight
+
+Before any other work, run:
+
+```bash
+bash scripts/setup-worktree.sh
+```
+
+Worktree-bootstrap step (sdlc-workflow-guide §8.5). Symlinks `.secrets/`,
+env files, and `node_modules/` from the main worktree so this isolated
+worktree has the credentials and installed deps integration tests need.
+
+If it errors or doesn't exist, stop immediately (§7 fifth trigger).
+
 ## Your job, in order
 
 1. **Read the plan.** Identify every integration-test listed in its

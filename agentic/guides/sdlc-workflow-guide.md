@@ -667,6 +667,103 @@ If the sprint's plan graph is highly linear, parallelism is minimal and
 that's fine — the sequential execution is simpler and still faster than
 operator-attended work.
 
+### 8.5 Worktree bootstrap
+
+A fresh worktree contains only what is **tracked in git**. To actually
+build, test, or run the project the agent additionally needs:
+
+- credentials in `.secrets/`
+- per-machine env files (`.env`, `options.txt`, `gradle.properties.local`)
+- installed dependencies (`node_modules/` for Node projects)
+- shared user-level caches (`~/.gradle/`, `~/.npm/` — already cross-worktree
+  via Gradle / npm's user-home env vars; no setup needed)
+
+These things are gitignored on purpose. The worktree must therefore be
+**bootstrapped** before useful work can begin.
+
+#### The pattern
+
+The main worktree (the one the operator usually works from) holds the
+master copy of every gitignored bit of local state. Each new worktree
+gets symlinks back to the main worktree's copies — single source of
+truth, no drift, no duplicated secrets.
+
+Per-project script `scripts/setup-worktree.sh` performs the linking.
+Run idempotently from inside any worktree:
+
+```bash
+#!/usr/bin/env bash
+# Bootstrap a freshly-created git worktree with the local-only state
+# it needs to run. Run from inside the worktree. Idempotent.
+set -euo pipefail
+
+WORKTREE="$(pwd)"
+MAIN="$(git worktree list --porcelain | awk '/^worktree / { print $2; exit }')"
+[[ "$WORKTREE" == "$MAIN" ]] && exit 0  # we ARE the main; nothing to do
+
+link_if_missing() {
+    local rel="$1"
+    [[ -e "$MAIN/$rel" ]] || return 0
+    [[ -L "$WORKTREE/$rel" || -e "$WORKTREE/$rel" ]] && return 0
+    ln -s "$MAIN/$rel" "$WORKTREE/$rel"
+    echo "linked: $rel"
+}
+
+link_if_missing .secrets
+link_if_missing .env
+link_if_missing options.txt
+link_if_missing gradle.properties.local
+link_if_missing node_modules
+
+[[ -e "$WORKTREE/.secrets" ]] || { echo "BOOTSTRAP FAIL: .secrets missing"; exit 1; }
+echo "worktree ready: $WORKTREE"
+```
+
+The list of items to link is **project-specific** — a backend-only
+project skips `node_modules`, a non-Gradle project skips
+`gradle.properties.local`. Operators tailor the script to their stack
+and update it when the project's local-state surface changes.
+
+#### Orchestrator first-action contract
+
+`/sprint-implementation` and any other invoker of worktree-isolated
+subagents prepends every subagent's prompt with:
+
+> Before any other work, run `bash scripts/setup-worktree.sh`. If it
+> errors or the script does not exist, stop immediately and report;
+> do not proceed.
+
+The bootstrap is the first thing every subagent does. If it fails,
+that's an **infrastructure-broken** stop (the fifth trigger in §7) —
+surface to operator, don't try to fix silently.
+
+#### Dep-manifest changes — concurrency hazard
+
+If an agent's task changes a dependency manifest (`package.json`,
+`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, Gradle's lock
+file), the symlinked `node_modules/` becomes stale. The agent
+**must not** run `npm install` (or equivalent) in its worktree —
+that would mutate main's `node_modules/` and break every other parallel
+agent reading from it.
+
+The agent stops and asks: "the dep manifest changed — main worktree
+must run `<install-command>` and the bootstrap will re-link a
+refreshed `node_modules/`". Operator decides: install in main and
+resume, or break the task into a setup-task plus a feature-task.
+
+This is the only concurrency hazard the symlink approach has, and the
+fix is a deliberate operator step — not silent corruption.
+
+#### Read-only intent
+
+Subagents treat the symlinked `node_modules/`, `.secrets/`, and env
+files as **read-only**. They never write back. The main worktree is
+the writer; agents read.
+
+Build outputs (`build/`, `target/`, `.next/`, `dist/`) are **per
+worktree** — each subagent gets a fresh build tree. That's correct;
+that's the isolation we want.
+
 ## 9. `.claude/` ↔ `agentic/` directory pattern
 
 ### 9.1 Why two directories

@@ -25,6 +25,21 @@ collection of E2E specs that grows alongside the product.
 - The project's existing E2E specs (typically under `e2e/` or
   similar).
 
+## Pre-flight
+
+Before any other work, run:
+
+```bash
+bash scripts/setup-worktree.sh
+```
+
+Worktree-bootstrap step (sdlc-workflow-guide §8.5). E2E specs typically
+need `.secrets/` (test-user credentials) and `node_modules/` (Playwright
+browsers under `node_modules/.cache/ms-playwright/`); the bootstrap
+links both from the main worktree.
+
+If it errors or doesn't exist, stop immediately (§7 fifth trigger).
+
 ## Your job, in order
 
 1. **Read the plan's Test strategy directive.** It will be one of:

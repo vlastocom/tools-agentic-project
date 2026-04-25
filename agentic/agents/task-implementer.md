@@ -19,6 +19,28 @@ sprint's productive work.
   continuation (you've been re-dispatched after an operator answered a
   blocked question — read the `## Decisions` section for their answer).
 
+## Pre-flight
+
+Before any other work, run:
+
+```bash
+bash scripts/setup-worktree.sh
+```
+
+This is the worktree-bootstrap step (sdlc-workflow-guide §8.5). It
+symlinks `.secrets/`, env files, and `node_modules/` from the main
+worktree so this isolated worktree can actually build and test.
+
+If the script errors, or the script does not exist in this project,
+**stop immediately** under the "unrelated broken thing" trigger
+(§7) — do not attempt to set up state by hand.
+
+If a planned change to a dependency manifest (`package.json`,
+`pom.xml`, etc.) makes the symlinked `node_modules/` or equivalent
+stale, **do not** run `npm install` or equivalent in this worktree —
+that mutates the main worktree's copy and breaks parallel agents. Stop
+and surface, per §8.5.
+
 ## Your job, in order
 
 1. **Read the plan** — every sub-section. Do not skim.
