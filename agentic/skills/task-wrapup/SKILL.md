@@ -1,46 +1,95 @@
 ---
 name: task-wrapup
-description: Use this skill to finalise a completed task — update documentation, backlog and commit.
+description: Use this skill to manually run the task-wrapper subagent to finalise a single task. Escape hatch around the `/sprint-implementation` per-task pipeline. Renames the task doc to `.complete.md`, updates the backlog, and gates on review dispositions.
 ---
 
-# Task Wrap-up
+# /task-wrapup
 
-Follow these steps after implementation and testing are complete and approved.
+Manually invoke the `task-wrapper` subagent to finalise a single task.
 
-## Step 1: Documentation
+This is an **escape hatch**. Under the SDLC workflow (see
+[sdlc-workflow-guide.md §5.2](../../guides/sdlc-workflow-guide.md#52-sprint-implementation--unattended-orchestrator)
+and [§5.4.3](../../guides/sdlc-workflow-guide.md#543-disposition-rules)),
+wrap-up normally runs as the final step of the per-task pipeline
+inside `/sprint-implementation`, after a passing review. Use this
+skill when you want to:
 
-1. **Check project documentation** — review all relevant `*.md` files and ensure they are up to date with the changes
-2. **Consider new documentation** — if new guides or README files are needed, ask for confirmation before creating them
-3. **Update the task document** and rename it from `docs/tasks/<taskID>.md` to `<taskID>.complete.md`
-4. **Update the backlog** - use `/backlog-management`
-   - Update the task status to **DONE**
-   - Update the **End date** field in Task Details to the current date (YYYY-MM-DD)
-   - Update the link to the task document in the **Documentation** field to reflect the new file name
+- Wrap up a task that was reviewed clean out of band.
+- Re-attempt wrap-up after the previous attempt returned `NOT READY`
+  (because should-fix or consider items were left undone without a
+  rationale in `## Deviations`).
+- Test the task-wrapper subagent in isolation.
 
-## Step 2: Pre-commit checks
+## Pre-flight
 
-1. Run all relevant tests:
-   - Unit tests (`npx vitest run` / `./gradlew test`)
-   - Integration tests (`./gradlew integrationTest`) if applicable
-   - E2E tests (`npx playwright test`) if applicable
-2. Ensure TypeScript compilation succeeds with no errors: `npx tsc --noEmit`
-3. Run the linter: `npm run lint`
-4. Validate the backlog: `/backlog-validation`
-5. Check spelling and grammar in any modified `.md` files
+1. Identify the `<TASK-ID>`. Confirm:
+   - `docs/tasks/<TASK-ID>.md` exists with a `## Review notes` block
+     and verdict `PASS` (no outstanding must-fix items).
+   - All tests are green for this task (unit / integration / E2E as
+     applicable).
+   - `agentic/agents/task-wrapper.md` exists.
+   - `scripts/setup-worktree.sh` exists in the project root.
 
-## Step 3: Commit
+## Invocation
 
-1. **Present all changes** to the user and **wait for explicit approval** before committing
-2. Use descriptive commit messages:
-   - First line: brief summary in imperative mood (50-72 characters)
-   - Body: detailed explanation of what and why (not how)
-   - Include the task ID reference (e.g. `AUTH-02-0016`)
-3. Commits should be atomic — one logical change per commit
-4. **Never commit without explicit approval**
+```
+Agent(
+    subagent_type: "task-wrapper",
+    isolation: "worktree",
+    prompt: "Before any other work, run `bash scripts/setup-worktree.sh`.
+             If it errors or doesn't exist, stop. Then wrap up task
+             <TASK-ID> per the rules in agentic/agents/task-wrapper.md.
+             Gate on every should-fix and consider item in
+             `## Review notes` being either fixed or rationalised in
+             `## Deviations` per SDLC §5.4.3. If gating fails, return
+             NOT READY with the specific items listed."
+)
+```
 
-## References
+## On return
 
-- [Spelling and grammar rules](../../guides/spelling-and-grammar-rules.md)
-- Backlog updates: `/backlog-management`
-- Backlog validation: `/backlog-validation`
-- Markdown editing: `/md-file-editing`
+- **Clean** — the wrapper has:
+  - Renamed `docs/tasks/<TASK-ID>.md` → `docs/tasks/<TASK-ID>.complete.md`.
+  - Filled in `## Wrap-up → Delivered` summary.
+  - Updated the backlog row's Status to `DONE` and End date to today
+    (UTC).
+  - Updated the `Documentation` field to point to the new
+    `.complete.md` filename.
+  - Run pre-commit checks (lint, type-check, test runs as applicable).
+
+  Next: surface to operator (or hand back to `/sprint-implementation`
+  to move on to the next task).
+
+- **NOT READY** — should-fix or consider items remain unaddressed and
+  not rationalised. Route back to `/task-implementation` with the
+  outstanding list, then re-invoke `/code-reviewing`, then re-invoke
+  this skill.
+
+- **BLOCKED** — environment problem (lint/type/test failure that the
+  wrapper cannot resolve) or open question. Surface to operator,
+  resolve, re-invoke.
+
+## Reminders the task-wrapper subagent enforces
+
+The agent definition is the authoritative spec; this is a quick
+reminder of what it is contractually held to:
+
+- **Disposition gating** — every should-fix and consider must be
+  fixed or have a rationale in `## Deviations`. Empty rationale =
+  NOT READY.
+- **Rename, do not copy** the task doc to `.complete.md`. Move git
+  history with the rename.
+- **Backlog row update is part of wrap-up**, not a separate step.
+- **No commit, no push.** Commits happen at sprint review (per
+  [SDLC §5.5](../../guides/sdlc-workflow-guide.md#55-sprint-review--interactive-main-conversation));
+  out-of-band wrap-ups commit when the operator says so.
+- **Stop and ask** on the five triggers per [SDLC §7](../../guides/sdlc-workflow-guide.md#7-stop-and-ask-contract-detailed).
+
+## See also
+
+- [SDLC workflow guide §5.4.3 — disposition rules](../../guides/sdlc-workflow-guide.md#543-disposition-rules)
+- [SDLC workflow guide §5.5 — sprint review (commit/push happens here)](../../guides/sdlc-workflow-guide.md#55-sprint-review--interactive-main-conversation)
+- Subagent definition: `agentic/agents/task-wrapper.md`
+- Previous step: `/code-reviewing`
+- Next step: hand back to `/sprint-implementation`, or wait for
+  `/sprint-review` to commit.

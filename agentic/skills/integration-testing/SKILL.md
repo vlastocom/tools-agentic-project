@@ -1,56 +1,78 @@
 ---
 name: integration-testing
-description: Use this skill when writing or running integration tests after the implementation is approved.
+description: Use this skill to manually run the integration-tester subagent on a single task. Escape hatch around the `/sprint-implementation` per-task pipeline.
 ---
 
-# Integration Testing
+# /integration-testing
 
-Integration tests form the middle layer of the [testing pyramid](../../guides/testing-guide.md#the-testing-pyramid) (20% of all tests).
-They verify component interactions, data flow and API contracts.
+Manually invoke the `integration-tester` subagent on a single task.
 
-## Steps
+This is an **escape hatch**. Under the SDLC workflow (see
+[sdlc-workflow-guide.md §5.2](../../guides/sdlc-workflow-guide.md#52-sprint-implementation--unattended-orchestrator)),
+integration testing normally runs as the second step of the per-task
+pipeline inside `/sprint-implementation`, after `task-implementer`
+returns clean. Use this skill when you want to:
 
-1. **Review the plan** — check the integration tests documented in the task plan and verify they are still current with the implementation
-2. **Implement the tests** following the guidelines below
-3. **Run the tests** and ensure they pass
-4. **Run the full integration test suite** to check for regressions and side effects
-5. **Never ignore failed tests** — the repository is always assumed to be in a clean state. If
-   any test fails, even one that appears unrelated to the current work, investigate it. A failure
-   outside your scope most likely indicates a test side effect or contamination introduced by your
-   changes. Diagnose and fix it before proceeding.
-6. **Debug issues** as needed — investigate root causes rather than working around failures
-7. **Pause for review** — let the user review and approve the integration tests before continuing
+- Re-run integration tests on a task after a redirect or fix.
+- Add or update integration tests for a task that was implemented out
+  of band.
+- Test the integration-tester subagent in isolation.
 
-## Frontend integration tests (Vitest)
+## Pre-flight
 
-Follow the [frontend testing guide](../../guides/testing-guide.md).
+1. Identify the `<TASK-ID>`. Confirm:
+   - The task has an approved plan in `docs/tasks/<TASK-ID>.md` with
+     `## Plan → ### Test Strategy → Integration tests` populated.
+   - The implementation is in place (either in the main worktree or a
+     dedicated task worktree).
+   - `agentic/agents/integration-tester.md` exists.
+   - `scripts/setup-worktree.sh` exists in the project root.
+2. If running outside the orchestrator, decide whether to use a fresh
+   worktree (clean baseline) or operate on the existing one. Default to
+   `isolation: "worktree"` for parity with the pipeline.
 
-- Test component interactions with Redux store, React Router and Apollo Client together
-- Use `MockedProvider` with realistic GraphQL responses
-- Test navigation flows and route guards
-- Test form submission flows end to end within the component tree
+## Invocation
 
-## Backend integration tests (Spring Boot)
-
-- Test files go in `src/integration-test/java/` (separate source set)
-- Use `@SpringBootTest` with a test database
-- Test GraphQL queries and mutations through the DGS framework test utilities
-- Test service-to-repository integration with actual database queries
-- See [test database setup](../../../src/integration-test/java/com/vlasto/finance/nest/testutil/README.md) for configuration
-
-## Running tests
-
-```bash
-# Frontend integration tests (same runner, different scope)
-npx vitest run src/path/to/file.integration.test.tsx
-
-# Backend integration tests
-./gradlew integrationTest
+```
+Agent(
+    subagent_type: "integration-tester",
+    isolation: "worktree",
+    prompt: "Before any other work, run `bash scripts/setup-worktree.sh`.
+             If it errors or doesn't exist, stop. Then run integration
+             tests for task <TASK-ID> per the plan in
+             docs/tasks/<TASK-ID>.md and the rules in
+             agentic/agents/integration-tester.md. Read warnings and
+             stderr signals as first-class evidence — do not dismiss
+             them as flaky."
+)
 ```
 
-## References
+## On return
+
+- **Clean** — task doc updated with `## Test outcomes → Integration`.
+  Coverage report path captured. Next: run `/e2e-testing <TASK-ID>` (or
+  hand back to the orchestrator).
+- **BLOCKED** — open question or persistent failure surfaced in the
+  task doc. Surface to operator, capture answer, re-invoke.
+
+## Reminders the integration-tester subagent enforces
+
+The agent definition is the authoritative spec; this is a quick
+reminder of what it is contractually held to:
+
+- **Never ignore failed tests.** A failure outside the task's apparent
+  scope most likely indicates a side effect introduced by this task.
+  Diagnose and fix before proceeding (see [SDLC §5.4.2 — test signals](../../guides/sdlc-workflow-guide.md#542-test-signals)).
+- **Read stderr.** Apollo `Missing field`, React `act()`, jsdom
+  `Not implemented`, tear-down race messages — each is evidence.
+- **Do not weaken assertions** to make a failure go away. Find root
+  cause first.
+- **Stop and ask** on the five triggers per [SDLC §7](../../guides/sdlc-workflow-guide.md#7-stop-and-ask-contract-detailed).
+
+## See also
 
 - [Testing guide](../../guides/testing-guide.md)
-- [Test utilities README](../../../src/integration-test/java/com/vlasto/finance/nest/testutil/README.md)
-- Parent workflow: `/task-implementation`
-- Related: `/unit-testing`, `/e2e-testing`
+- [SDLC workflow guide §5.2, §5.4.2, §7](../../guides/sdlc-workflow-guide.md)
+- Subagent definition: `agentic/agents/integration-tester.md`
+- Previous step: `/task-implementation`
+- Next step: `/e2e-testing`

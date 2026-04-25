@@ -1,130 +1,98 @@
 ---
 name: code-reviewing
-description: Use this skill when reviewing pull requests and diffs. Reviews the code for quality, security, best practices, validates the low level design and user interface design. 
+description: Use this skill to manually run the code-reviewer subagent on a single task. Escape hatch around the `/sprint-implementation` per-task pipeline. Produces the `## Review notes` block with must-fix / should-fix / consider taxonomy.
 ---
 
-# Code Reviewer Skill
+# /code-reviewing
 
-When reviewing code changes (code diffs, pull requests or any unstaged code), act as a Senior Engineer 
-and follow these steps systematically:
+Manually invoke the `code-reviewer` subagent on a single task.
 
-## 1. Context & Purpose
-*   Understand the goal of the PR from the context of the task being worked on. If unclear, ask for clarification.
-*   Identify the scope: is this a hotfix, a new feature or refactoring?
-*   Check for adherence to the SOLID principles and DRY (Don't Repeat Yourself) principle.
+This is an **escape hatch**. Under the SDLC workflow (see
+[sdlc-workflow-guide.md §5.2](../../guides/sdlc-workflow-guide.md#52-sprint-implementation--unattended-orchestrator)
+and [§5.4](../../guides/sdlc-workflow-guide.md#54-code-review)),
+code review normally runs as the fourth step of the per-task pipeline
+inside `/sprint-implementation`, after E2E. Use this skill when you
+want to:
 
-## 2. Review Checklist
-Analyse the code for the following:
+- Re-review a task whose first review identified must-fix items that
+  have since been addressed (the must-fix loop normally handles this,
+  but you can drive it manually).
+- Review a task that was implemented out of band.
+- Test the code-reviewer subagent in isolation.
 
-*   **Security**: Check for OWASP Top 10 vulnerabilities (SQL injection, XSS, insecure data handling, hardcoded credentials).
-*   **Correctness & Logic**: Do the changes actually fulfill the intent? Look for race conditions and edge cases.
-*   **TODOs**: All TODO comments must contain a backlog task ID. Do not commit any code, where this rule is violated. List the comment and its location and propose creating the appropriate task.
-*   **Error Handling**: Are errors caught, logged and handled gracefully? Are any actions audited as per [Audit requirements](../../../docs/requirements/05-auditing.md)?
-*   **Maintainability & Readability**: Is the code clear? Are variable/function names descriptive?
-*   **Dead code**: Check for unused imports, unused fields, unused variables, unused methods and unreachable code. These are common leftovers after refactoring.
-*   **Duplicate expressions**: Look for repeated identical expressions within a method body (e.g. calling `UUID.fromString(id)` multiple times on the same argument). Extract these into a `final` local variable and reuse it.
-*   **Performance**: Look for $N+1$ query issues, inefficient algorithms or unnecessary computations.
-*   **Testing**: Do tests cover the new logic comprehensively? Are existing tests passing? Are the tests (front end and backend) roughly matching the [testing pyramid](../../guides/testing-guide.md#the-testing-pyramid)?
-*   **Test-run signals**: Scan the test output for unhandled errors (Vitest's `Errors N error(s)` line), timeouts, tear-down races, and `stderr` warnings from Apollo MockedProvider / React `act()` / jsdom. These are first-class review concerns even when every test is "green". Flag each distinct signal in the review with a specific root-cause hypothesis; the reviewee must either fix or file a CLEANUP task. "Flaky" and "pre-existing" are not acceptable dispositions without a backlog pointer.
-*   **Comments**: Please review all changes in comments and make sure that they are clear, concise and follow [spelling and grammar rules](../../guides/spelling-and-grammar-rules.md)
+## Pre-flight
 
-## 3. Project metrics
+1. Identify the `<TASK-ID>`. Confirm:
+   - The task has an implementation in place and tests are green
+     (integration + E2E if applicable).
+   - `docs/tasks/<TASK-ID>.md` exists with `## Plan` and
+     `## Test outcomes` populated.
+   - `agentic/agents/code-reviewer.md` exists.
+   - `scripts/setup-worktree.sh` exists in the project root.
 
-Before delivering findings, gather and report the current LOC and test-coverage
-picture. This contextualises every finding — a "low coverage" comment means more when
-the number is shown.
+## Invocation
 
-### 3.1 Lines of code by language
-
-Run `cloc` on the project root, excluding generated and vendor directories:
-
-```bash
-cloc /home/vlasto/src/finance/nest \
-    --exclude-dir=node_modules,.gradle,build,dist,.next,coverage,.claude,playwright-report,test-results
+```
+Agent(
+    subagent_type: "code-reviewer",
+    isolation: "worktree",
+    prompt: "Before any other work, run `bash scripts/setup-worktree.sh`.
+             If it errors or doesn't exist, stop. Then review the
+             implementation and tests for task <TASK-ID> per the rules
+             in agentic/agents/code-reviewer.md. Produce the
+             `## Review notes` block in docs/tasks/<TASK-ID>.md using
+             the must-fix / should-fix / consider taxonomy from
+             SDLC §5.4.3. Include the project-metrics section
+             (LOC + coverage table) at the top of the review.
+             [If re-reviewing: append context — what the prior must-fix
+              items were and a pointer to where they were addressed.]"
+)
 ```
 
-Report the *Code* column by language in a compact table (Java, TypeScript, TSX, SQL,
-HTML, Markdown — drop anything with fewer than ~50 lines of code). Skip the
-`files`/`blank`/`comment` columns in the review output.
+## On return
 
-### 3.2 Backend test coverage (Jacoco — unit tests only)
+The code-reviewer writes `## Review notes` into the task doc with a
+verdict (`PASS` / `FAIL`) and itemised findings:
 
-Jacoco currently runs only for the unit-test task (`./gradlew test` →
-`build/reports/jacoco/test/jacocoTestReport.xml`). If the report is stale or missing,
-refresh it with `./gradlew test`, then parse the XML to summarise per-package coverage.
+- **must-fix** — blocks wrap-up; route through the must-fix loop.
+- **should-fix** — defaults to "fix"; skipping requires rationale in
+  `## Deviations`.
+- **consider** — defaults to "fix"; skipping requires rationale in
+  `## Deviations`.
 
-```bash
-# Per-package INSTRUCTION coverage, sorted worst first
-python3 - <<'PY'
-import xml.etree.ElementTree as ET
-root = ET.parse('/home/vlasto/src/finance/nest/build/reports/jacoco/test/jacocoTestReport.xml').getroot()
-rows = []
-for pkg in root.iter('package'):
-    miss = cov = 0
-    for c in pkg.findall('counter'):
-        if c.get('type') == 'INSTRUCTION':
-            miss = int(c.get('missed')); cov = int(c.get('covered'))
-    total = miss + cov
-    pct = 100.0 * cov / total if total else 0.0
-    rows.append((pkg.get('name'), total, pct))
-rows.sort(key=lambda r: r[2])
-for name, total, pct in rows:
-    print(f'{pct:5.1f}%  {total:>6}  {name}')
-PY
-```
+Next steps depending on outcome:
 
-Roll this up to a summary table in the review output: overall coverage %, and the
-bottom 3-5 packages with the lowest coverage (flag any package below 70% — that is
-the project-wide threshold enforced in `build.gradle`).
+- **PASS, no must-fix** — proceed to `/task-wrapup`.
+- **PASS, must-fix items present** — re-invoke `/task-implementation`
+  with the must-fix list, then re-invoke this skill. Cap at three
+  re-review rounds (fourth round failure → mark task `Failed-out`
+  per [SDLC §5.4.4](../../guides/sdlc-workflow-guide.md#544-must-fix-loop-cap)).
+- **BLOCKED** — open question or environment problem in the task doc.
+  Surface to operator, capture answer, re-invoke.
 
-Integration tests do NOT currently produce a Jacoco report — call this out if any
-class in the PR is exercised primarily via integration tests (its unit coverage may
-look artificially low).
+## Reminders the code-reviewer subagent enforces
 
-### 3.3 Frontend test coverage (Vitest / c8)
+The agent definition is the authoritative spec; this is a quick
+reminder of what it is contractually held to:
 
-If the PR touches `nest-ui/`, regenerate and summarise:
+- **Project metrics section first** — LOC + coverage table, before
+  findings. The reader sees the size and coverage picture before any
+  finding.
+- **Test-run signals are first-class** — Vitest `Errors N error(s)`
+  lines, timeouts, tear-down races, Apollo / React `act()` / jsdom
+  warnings. "Flaky" or "pre-existing" without a CLEANUP backlog
+  pointer is not an acceptable disposition.
+- **TODOs must reference a backlog task ID.** Otherwise: must-fix or
+  file the task.
+- **Number findings** (FINDING-1, FINDING-2, …) so subsequent
+  conversation can reference them.
+- **Stop and ask** on the five triggers per [SDLC §7](../../guides/sdlc-workflow-guide.md#7-stop-and-ask-contract-detailed).
 
-```bash
-npm --prefix /home/vlasto/src/finance/nest/nest-ui run test:coverage -- --reporter=json-summary
-```
+## See also
 
-Vitest writes `nest-ui/coverage/coverage-summary.json`. Report the *total* line
-coverage and flag files in the PR scope with line coverage below 70%.
-
-For backend-only PRs this section can be skipped with a one-line "frontend unchanged —
-Vitest coverage not re-run".
-
-### 3.4 Highlighting gaps
-
-In the review output, call out:
-
-1. **Files newly introduced in this PR** whose coverage is below 70% — a
-   concrete failure for this specific change.
-2. **Files modified in this PR** whose coverage has *dropped* or is still below 70% —
-   the PR is compounding an existing gap.
-3. **Neighbour files at risk**: classes the PR touches indirectly (e.g. services it
-   newly depends on) whose coverage is low — a follow-up concern, not a blocker.
-
-Keep the metrics compact: one LOC table + one coverage table + a short
-"coverage gaps" bullet list. Do not paste raw tool output into the review.
-
-## 4. Feedback Structure
-
-Provide feedback in a constructive, actionable tone. For each finding, use:
-
-1.  **Issue**: Describe the problem (e.g. "Potential SQL injection").
-2.  **Impact**: Explain why it matters (e.g. "Attacker can read the user database").
-3.  **Suggested Fix**: Provide a code snippet or refactoring suggestion.
-
-Please number the findings (e.g. FINDING-1, FINDING-2, etc.), so I can easily reference them in my answers.
-
-## 5. Output Formatting
-*   Summarise findings with: **[Critical]**, **[Important]** or **[Suggestion]**.
-*   If everything looks good, provide a summary of what was done well.
-*   Put the metrics section (from step 3) near the top of the review, before the findings, so the reader sees the size and coverage picture first.
-
-## 6. Project-Specific Rules
-*   Use TypeScript strictly; no `any` types.
-*   Prefer functional programming patterns over imperative loops when appropriate.
-*   Log errors using `logger.error` rather than `console.log`.
+- [SDLC workflow guide §5.4 — code review](../../guides/sdlc-workflow-guide.md#54-code-review)
+- [SDLC workflow guide §5.4.3 — disposition rules](../../guides/sdlc-workflow-guide.md#543-disposition-rules)
+- [SDLC workflow guide §5.4.4 — must-fix loop cap](../../guides/sdlc-workflow-guide.md#544-must-fix-loop-cap)
+- Subagent definition: `agentic/agents/code-reviewer.md`
+- Previous step: `/e2e-testing`
+- Next step: `/task-wrapup`
