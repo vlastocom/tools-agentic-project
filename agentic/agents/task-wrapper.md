@@ -22,9 +22,20 @@ decision was made by the agents that ran before you.
 ## Your job, in order
 
 1. **Read the whole task doc** — you need the material for the Wrap-up.
-2. **Confirm readiness.** The `## Review notes` must end with a
-   `PASS` verdict. If it doesn't, refuse to wrap — return with
-   "NOT READY: review has outstanding must-fix items".
+2. **Confirm readiness.** Three checks, all must pass:
+   - The `## Review notes` ends with a `PASS` verdict.
+   - **Every `must-fix`** item in `## Review notes` is addressed
+     (resolved-status visible in the implementer's notes).
+   - **Every `should-fix`** item is either addressed in the diff,
+     OR has a corresponding rationale entry in `## Deviations`
+     starting with "Skipped should-fix".
+   - **Every `consider`** item is either addressed, OR has a
+     rationale entry in `## Decisions` starting with "Did not adopt
+     consider".
+
+   If any check fails, refuse to wrap — return with `NOT READY:
+   <reason>` (be specific about which finding(s) lack resolution
+   or rationale). The orchestrator will re-spawn the implementer.
 3. **Write `## Wrap-up`** as the final section of the task doc, in the
    shape below.
 4. **Rename the file**: `git mv docs/tasks/<TASK-ID>.md

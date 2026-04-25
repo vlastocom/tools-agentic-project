@@ -163,17 +163,89 @@ any time to see sprint state without scrolling conversation:
 ### 3.4 Sprint coverage summary
 
 `docs/sprints/<sprint-id>.coverage.md` — produced by the orchestrator as its
-final act before handing back to the operator. Self-contained reading:
+final act before handing back to the operator. Self-contained reading.
 
-- Per-source-set (unit / integration) coverage numbers + HTML link
-- Frontend coverage numbers + HTML link
-- E2E: specs run, pass/skip/fail counts + report link
-- Coverage delta vs. previous sprint
+Sections:
+
+- **Coverage** — per source-set (unit / integration), per stack (backend
+  / frontend), each row carrying:
+  - Lines / branches / functions / statements (current)
+  - **Δ from the previous sprint's coverage summary** for each metric
+  - Link to the freshly-rendered HTML report
+- **E2E** — specs run, pass / skip / fail counts, plus the per-spec
+  durations from §3.6's runtime block; link to the Playwright report
+- **Test runtime** — see §3.6 for the metric definitions and threshold
+  rules; this block embeds the current-vs-previous comparison and
+  highlights any threshold trips
+- **Tasks completed** — links to each `.complete.md` produced this
+  sprint
+- **Tasks failed-out** — short list with each task's reason
+- **Tasks reworked** — rework tasks created during sprint-review (if
+  any), each linked to its origin via `depends_on` (§5.5)
+
+The orchestrator reads the previous sprint's `.coverage.md` to compute
+the deltas. If no previous sprint exists, deltas are recorded as `—`.
 
 ### 3.5 CHANGELOG
 
 Updated during sprint-wrapup with one section per released version (if any
 release artefacts were produced).
+
+### 3.6 Test runtime monitoring
+
+For each test suite (unit, integration, E2E — backend and frontend
+where applicable), three metrics are tracked across sprints:
+
+| Metric          | Computed as                                                | Expected behaviour over time                |
+|-----------------|------------------------------------------------------------|---------------------------------------------|
+| `total`         | wall-clock time of the suite                               | grows roughly linearly with test count      |
+| `avg`           | `total / number-of-test-cases`                             | should be **roughly constant**              |
+| `max`           | wall-clock of the slowest single test case (with its name) | should be **roughly constant**              |
+
+`total` growing as the test count grows is fine — that is the point of
+adding tests. `avg` and `max` are the early-warning indicators: a slow
+new test or a slow regression on an existing test pulls these up.
+
+#### Thresholds (defaults, configurable per project)
+
+Threshold trips are computed on **the per-sprint delta** vs. the
+previous sprint's `.coverage.md`:
+
+| Metric                       | Default trip threshold                          |
+|------------------------------|-------------------------------------------------|
+| `Δ avg`                      | +5% of the previous-sprint avg                  |
+| `Δ max` (slowest single test) | +25% of the **current** sprint's avg            |
+
+The `Δ max` threshold is anchored to the current avg, not to a fixed
+millisecond budget. Rationale: a fixed-ms budget (say 500ms / sprint)
+compounds — over ten sprints the slowest allowed test would creep
+several seconds beyond reason. Anchoring to a fraction of avg keeps
+the slowest test scaled to the suite's overall pace.
+
+#### What happens when a threshold trips
+
+A trip is **not** automatic failure. It is a **flagged deviation** that
+the operator must explicitly resolve at sprint review:
+
+1. **Accept** — the new slow test is justified (e.g. exercises a
+   genuinely long happy-path flow). Operator acknowledges the
+   deviation in the sprint log's Decision log; threshold tolerated
+   for this sprint, baseline rolls forward.
+2. **Rework** — the slowness is fixable. A rework task is created
+   per the rework path in §5.5, depending on the offending test's
+   originating task.
+
+The deviation does **not** block sprint review from completing; it is
+surfaced as part of the operator's reading list and gets dispositioned
+explicitly.
+
+#### Tooling
+
+`agentic/scripts/test-runtime-summary.py` produces the runtime block.
+Generic to the test framework — invoked with explicit CLI flags for
+each suite's report format and path. Each project documents its
+specific invocation in `docs/` (typically alongside its testing guide).
+The orchestrator runs it as part of producing `<sprint-id>.coverage.md`.
 
 ## 4. Skills and subagents inventory
 
@@ -436,21 +508,28 @@ The reviewer is briefed to check:
 
 Reviewer writes findings into the task doc's `## Review notes`, classified:
 
-| Class       | Meaning                                        | Implementer action                                   |
-|-------------|------------------------------------------------|------------------------------------------------------|
-| **must-fix**| Correctness bug, security issue, contract violation | Fix before proceeding to wrap-up                  |
-| **should-fix**| Style, readability, naming                   | Fix unless a stated reason not to                    |
-| **consider**| Alternative approach, suggestion                | Respond inline: "fixed" / "noted" / "disagree: why"  |
+| Class       | Meaning                                                       | Default disposition                       | Skipping requires                                                    |
+|-------------|---------------------------------------------------------------|-------------------------------------------|----------------------------------------------------------------------|
+| **must-fix**| Correctness bug, security issue, contract violation           | **Fix.**                                  | n/a — never skipped                                                  |
+| **should-fix**| Style, readability, naming, maintainability                 | **Fix.**                                  | An explicit rationale appended to `## Deviations` (it is a **minor deviation** to skip a should-fix; it must be logged) |
+| **consider** | Alternative approach, suggestion, refactor candidate          | **Almost always fix.**                    | A documented reason in `## Decisions` (past suggestions have been high-quality — defaulting to fix is correct) |
 
-Re-review happens after `must-fix` items are addressed. A re-review that
-produces new `must-fix` items that were not apparent in the first pass is
-allowed once; on the third round of new must-fix findings, the task is
-**failed-out** of the sprint.
+Re-review happens after **all `must-fix`** items are addressed. The
+implementer is also expected to address every `should-fix` and `consider`
+item — or to explicitly log the rationale for skipping per the table
+above. A re-review that produces new `must-fix` items that were not
+apparent in the first pass is allowed once; on the third round of new
+must-fix findings, the task is **failed-out** of the sprint.
+
+The `task-wrapper` agent (§5.2) refuses to wrap a task whose
+`## Review notes` has unresolved findings — every must-fix must be
+fixed; every should-fix must be either fixed or logged in `## Deviations`;
+every consider must be either fixed or rationalised in `## Decisions`.
 
 ### 5.5 `/sprint-review` — interactive, main conversation
 
 **Input:** Sprint in `OPEN` status with all tasks wrapped or failed-out.
-Coverage summary and sprint log exist.
+Coverage summary (with deltas; §3.4) and sprint log exist.
 
 **Sequence:**
 
@@ -459,21 +538,61 @@ Coverage summary and sprint log exist.
    - **Sprint goal attainment** — did the completed work match the
      sprint goals? Read from sprint log + coverage.
    - **Task-by-task**: for each `.complete.md`, summarise delivered change
-     + any decisions or deviations. Operator skims in depth or skips.
+     + any decisions or deviations. Operator skims in depth or skips. At
+     each task the operator may **critique and direct rework** — see
+     §5.5.1 below.
    - **Coverage summary** — operator reads `<sprint-id>.coverage.md`
-     alongside the skill; any dip gets attention.
+     alongside the skill. Any negative coverage delta gets attention;
+     any test-runtime threshold trip (§3.6) gets explicit disposition
+     (accept-as-deviation or rework).
    - **E2E flows** — explicit walk-through of E2E specs run, per spec:
-     what the flow covered, outcome, any flake.
+     what the flow covered, outcome, any flake. Cross-reference how
+     each spec evolved this sprint (which tasks extended / branched
+     / wrote new specs).
    - **Decisions and deviations** — aggregate list from all task docs.
-   - **Failed-out tasks** — what the operator wants to do: drop, roll
+   - **Failed-out tasks** — operator chooses disposition: drop, roll
      forward to next sprint, or break smaller.
-3. Once operator accepts the sprint, skill:
-   - Marks the sprint `OPEN → CLOSED` in the backlog.
-   - Writes a final sprint summary to the sprint log.
-   - Proposes the git-commit message; operator edits or accepts.
-   - Commits and pushes (or stops if the operator wants to stage first).
+3. Once operator accepts the sprint:
+   - Skill marks the sprint `OPEN → CLOSED` in the backlog.
+   - Skill writes a final sprint summary to the sprint log.
+   - Skill proposes the git-commit message; operator edits or accepts.
+   - Skill commits and pushes (or stops if the operator wants to stage
+     first).
 4. Skill prompts "Start the next sprint?" — yes → loops back to
    `/sprint-planning`.
+
+#### 5.5.1 Rework path — critiquing wrapped tasks
+
+The "review → close" sequence is only the happy path. During task-by-
+task review the operator may decide that a wrapped task didn't deliver
+what it should — a poor approach, missed scope, brittle tests, etc.
+The wrapped task itself is **not unwound** (history stays); a **rework
+task** is created instead.
+
+When the operator directs rework on `<original-id>`:
+
+1. Skill creates a new task in the backlog: `<original-area>-<original-epic>-<next-seq>`
+   with Short Name "Rework of `<original-id>` — `<reason>`" and Type
+   `TECHNICAL` (or matching the original).
+2. Skill adds a **`depends_on` link** from the new rework task to
+   `<original-id>` using the `TaskDependencies` mechanism. The rework
+   record is queryable from the original both directions.
+3. Skill records the operator's critique notes in the rework task's
+   detail block (will become the seed for `task-groomer` /
+   `task-planner` when the task is picked up).
+4. Operator chooses scheduling:
+   - **Run in this sprint** — sprint stays `OPEN`, orchestrator picks
+     the rework task up, takes it through the standard pipeline. After
+     wrap-up, sprint review resumes from where it paused.
+   - **Roll to next sprint** — task is added to next sprint's
+     candidate list; current sprint review continues.
+5. The original `.complete.md` stays as the historical record; the
+   rework's `.complete.md` references it via the `depends_on` chain
+   and notes in the rework's `## Wrap-up → Delivered` what it
+   superseded.
+
+Rework tasks list in the sprint log under `## Tasks reworked` (§3.4)
+and become part of the sprint's record.
 
 ## 6. TDD rule
 

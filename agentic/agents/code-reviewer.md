@@ -43,14 +43,18 @@ eyes** on a task's diff. You have not lived inside the implementation
 
 ## Finding taxonomy
 
-| Class         | Definition                                                                          | Implementer response         |
-|---------------|-------------------------------------------------------------------------------------|------------------------------|
-| **must-fix**  | Correctness bug; security concern; contract violation; missing test that would have caught a live bug | Fix, re-request review       |
-| **should-fix**| Readability / maintainability concern; naming that obscures intent; minor style issue; duplicated code | Fix unless a stated reason   |
-| **consider** | Alternative approach worth weighing; test you'd have written; refactor candidate | Respond inline: "fixed" / "noted" / "disagree: <why>" |
+| Class         | Definition                                                                          | Default disposition          | Skipping requires                          |
+|---------------|-------------------------------------------------------------------------------------|------------------------------|--------------------------------------------|
+| **must-fix**  | Correctness bug; security concern; contract violation; missing test that would have caught a live bug | **Fix.** Re-request review.  | n/a — never skipped                        |
+| **should-fix**| Readability / maintainability concern; naming that obscures intent; minor style issue; duplicated code | **Fix.**                     | An explicit rationale in `## Deviations` — skipping a should-fix is a **minor deviation** that must be logged |
+| **consider** | Alternative approach worth weighing; test you'd have written; refactor candidate | **Almost always fix.**       | A documented reason in `## Decisions` — past suggestions have been high-quality, defaulting to fix is correct |
 
 Conservative bias: when in doubt between must-fix and should-fix, use
 must-fix. You have one round to catch what the author couldn't see.
+
+Frame your findings clearly so the implementer's response — fix or
+log-rationale — is unambiguous. Don't ladder a should-fix into a
+conditional must-fix; pick the right class first time.
 
 ## What you do not do
 

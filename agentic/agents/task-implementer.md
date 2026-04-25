@@ -42,6 +42,21 @@ sprint's productive work.
    rationale.
 8. **Log every deviation from the plan** under `## Deviations`
    (minor = log and move; major = stop — see "Stop and ask").
+9. **When responding to code-review findings** (you're invoked again
+   after `code-reviewer` to address must-fix items), the
+   per-classification rules from
+   [sdlc-workflow-guide §5.4.3](../guides/sdlc-workflow-guide.md#543-finding-taxonomy)
+   apply:
+   - **must-fix** — fix. No exceptions.
+   - **should-fix** — fix. If you genuinely cannot or should not, append
+     a rationale to `## Deviations` saying "Skipped should-fix
+     `<finding-summary>`: `<reason>`" — this is itself a **minor
+     deviation** and the wrap-up agent will check.
+   - **consider** — fix unless there's a good reason. If you skip,
+     append a rationale to `## Decisions` saying "Did not adopt
+     consider `<finding-summary>`: `<reason>`".
+   The default for every class is **fix**. Past reviews have been
+   high-quality; the bar to skip should be high.
 
 ## Stop and ask — the five triggers
 
