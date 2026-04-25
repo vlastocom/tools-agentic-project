@@ -67,10 +67,32 @@ Bulleted list. Each item is independently verifiable. Include:
 - test criteria (what tests must exist and pass)
 
 ### Test strategy
-Per the testing-guide.md conventions: what unit tests, what integration
-tests, and (if this task itself is an E2E task) what E2E spec. TDD
-order is implicit — write tests first where the task produces testable
-behaviour.
+Per the testing-guide.md conventions, name three layers explicitly:
+
+1. **Unit tests** the implementer should add.
+2. **Integration tests** the integration-tester should add.
+3. **E2E coverage** — applying the **widest-flow rule**: identify the
+   widest existing E2E spec that this task's functionality can
+   plausibly extend, **or** if no existing spec fits, name the new
+   spec or sister-branch this task should create. Be explicit. Use
+   one of these directives verbatim:
+   - `extend <existing-spec-name> with: <one-line summary of the
+     additional steps>`
+   - `branch from <existing-spec-name> at <named step>; new spec
+     <new-spec-name>; covering: <one-line summary>`
+   - `write new <new-spec-name>; covering: <one-line summary>`
+   - `no E2E phase` — for tasks without user-visible behaviour
+     (pure backend services, scaffolding, config, infra)
+
+   The point of the widest-flow rule is that an E2E spec evolves
+   alongside the features that compose it — successive tasks extend
+   it where natural, branching only when the new behaviour is a
+   distinct sub-flow. The cross-feature happy path that emerges from
+   a sequence of extends is the destination, not a separate task.
+
+TDD order is implicit — write tests first where the task produces
+testable behaviour. The full TDD-mandatory rule and exemptions are in
+[sdlc-workflow-guide.md §6](../guides/sdlc-workflow-guide.md#6-tdd-rule).
 
 ### Dependencies
 Other task IDs (in this sprint or earlier) that must complete before

@@ -210,7 +210,8 @@ user-facing verb; the subagent is the worker.
 | `task-planner`        | `/sprint-planning` (after groom) or `/task-planning` | Groomed task row + relevant design docs | `docs/tasks/<TASK-ID>.md` with `## Plan` section populated |
 | `task-implementer`    | `/sprint-implementation` per task                | Task doc                               | Code changes + `## Progress log` / `## Decisions` / `## Deviations` |
 | `integration-tester`  | `/sprint-implementation` after implement         | Task doc + code changes                | Integration tests committed; `## Test outcomes` updated |
-| `code-reviewer`       | `/sprint-implementation` after integration tests | Task doc + diff                        | `## Review notes` with findings (§5.4.3)       |
+| `e2e-tester`          | `/sprint-implementation` after integration tests | Task doc + running dev / stage stack   | E2E spec extended / branched / created per plan; `## Test outcomes` updated |
+| `code-reviewer`       | `/sprint-implementation` after E2E tests         | Task doc + diff                        | `## Review notes` with findings (§5.4.3)       |
 | `task-wrapper`        | `/sprint-implementation` after review closed     | Task doc                               | Renames file to `.complete.md`; updates backlog row; writes `## Wrap-up` |
 
 All subagents run in `isolation: "worktree"` for safety (§8).
@@ -289,9 +290,14 @@ parallelism — §8), and dispatches a pipeline of subagents:
 └─────┬──────┘
       │
       ▼
-┌──────────────────┐
+┌───────────────────┐
 │ integration-tester│ ──▶ adds integration tests, runs full suite
-└─────┬────────────┘
+└─────┬─────────────┘
+      │
+      ▼
+┌──────────────┐
+│ e2e-tester   │ ──▶ extends / branches / writes E2E spec per plan,
+└─────┬────────┘     runs against the dev or stage stack
       │
       ▼
 ┌──────────────┐
@@ -312,11 +318,32 @@ parallelism — §8), and dispatches a pipeline of subagents:
 └──────────────┘
 ```
 
-E2E tests are **regular tasks** (not a phase inside each task). They live as
-explicit tasks in the backlog and go through the same pipeline; the
-"implementation" for an E2E task is writing the Playwright / Cypress spec,
-and the "integration test" phase runs the spec against the already-deployed
-stack.
+E2E tests are a **phase inside the per-task pipeline**, not a separate
+class of tasks. Whenever a task introduces user-visible behaviour, the
+e2e-tester extends or writes the E2E spec that exercises that behaviour.
+
+The planner specifies, in the task's `## Plan → ## Test strategy`, the
+**widest E2E flow** this task's functionality can plausibly extend or
+anchor — and which of these the e2e-tester should do:
+
+- **extend** an existing spec — the new behaviour is a natural
+  continuation of an existing flow
+- **branch** — create a sister spec at the point of divergence — the
+  new behaviour represents a distinct sub-flow from a shared starting
+  point
+- **write new** — no prior spec covers this surface
+
+Tasks without user-visible behaviour (pure backend services, scaffolding,
+config, infra-only work) get an empty E2E phase: the e2e-tester reads the
+plan, sees `no E2E phase`, returns immediately. This is the same shape as
+the integration-tester for tasks without integration surfaces.
+
+When wider flows emerge as features land in sequence — e.g. project
+creation, then area creation, then epic creation — the planner's
+widest-flow rule causes each subsequent task's plan to extend the prior
+spec, so the test grows naturally with the system. No "happy-path
+cross-feature task" is needed; the cross-feature flow is the destination
+the per-task extends arrive at.
 
 After each task completes, the orchestrator:
 
