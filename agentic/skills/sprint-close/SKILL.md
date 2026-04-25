@@ -1,34 +1,44 @@
 ---
 name: sprint-close
-description: Use this skill to close an open sprint.
+description: Manual override to flip an OPEN sprint to CLOSED. Subsumed by `/sprint-review` Step 6 — use this only when you need to close a sprint by hand without the full review walk-through.
 ---
 
-# Instructions for closing an open sprint
+# /sprint-close
 
-Follow the following steps to update the sprint section of [the backlog](../../../docs/backlog.md):
+> **Manual override.** Under the SDLC workflow (see
+> [sdlc-workflow-guide.md §5.5](../../guides/sdlc-workflow-guide.md#55-sprint-review--interactive-main-conversation)),
+> sprints are taken from OPEN to CLOSED by Step 6 of `/sprint-review`,
+> after the operator has walked through every wrapped task, the
+> coverage summary and runtime block, and any rework path. Use this
+> skill only when you need to flip the status by hand — e.g. a sprint
+> from before the new workflow, or recovering from a failed run.
+>
+> **Bypasses** the rework path (Step 4) and failed-out disposition
+> (Step 5) of `/sprint-review`. Anything you skip you take on yourself
+> to handle.
 
-1. Identify which sprint is currently in the OPEN state
-2. Check the sprint is ready to be closed. To be ready, it must meet the following criteria:
-    *  All tasks, which are part of this sprint, must have the state of DONE or DROP
-        * If there are tasks in other states, the sprint MUST NOT be closed.
-            * Report these as a reason to refuse to close the sprint
-            * Suggest moving these out of the sprint using the `/sprint-management` skill.
-    *  Evaluate if the tasks which are DONE have achieved the sprint success criteria
-3. If the sprint is not ready, report any issues with the previous check and DO NOT CLOSE THE SPRINT.
-   Wait for further instructions.
-4. If the sprint is ready to be closed, make the backlog changes:
-    * Set Sprint Status to `CLOSED`
-    * Set the Sprint `End date` to today's date (YYYY-MM-DD)
-5. Present the changes made for the approval
-6. Fix any issues that may arise and present the change again for approval. Repeat until the change is approved
-7. Upon approval, validate the backlog structure and consistency (/backlog-validation), then commit and push the backlog changes 
+Follow these steps to update the sprint section of [the backlog](../../../docs/backlog.md):
 
-# References
+1. Identify the sprint currently in `OPEN`. If none, refuse.
+2. Confirm the sprint is closable:
+   - Every task in the sprint has Status `DONE` or `DROP`. (Tasks in
+     `TODO`, `DOING`, or `GROOM` block closure — surface them and
+     suggest `/sprint-management` to move them out.)
+   - The sprint's success criteria are met (or you have explicit
+     operator direction to close anyway).
+3. If not closable, report the blockers and stop. Do not close.
+4. Update the backlog:
+   - Set the sprint's `Status` to `CLOSED`.
+   - Set the sprint's `End date` to today (UTC, `YYYY-MM-DD`).
+5. Present the change for approval. Iterate until approved.
+6. Validate the backlog (`/backlog-validation`).
+7. Commit and push the backlog change.
 
-* [The backlog](../../../docs/backlog.md)
-* [Backlog structure guide](../../guides/backlog-structure.md)
-* Skills to maintain the backlog:
-    * /backlog-management
-    * /backlog-validation
-* Skills to manage MD files (including the backlog):
-    * /md-file-editing
+## See also
+
+- [SDLC workflow guide §5.5 — sprint review](../../guides/sdlc-workflow-guide.md#55-sprint-review--interactive-main-conversation)
+- Normal flow: `/sprint-review` (replaces this skill end-to-end and
+  also handles rework + commit/push)
+- [Backlog structure guide](../../guides/backlog-structure.md)
+- Related: `/sprint-management`, `/backlog-management`,
+  `/backlog-validation`, `/md-file-editing`

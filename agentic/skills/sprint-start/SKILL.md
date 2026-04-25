@@ -1,39 +1,39 @@
 ---
 name: sprint-start
-description: Use this skill to start a new sprint.
+description: Manual override to flip a PLANNING sprint to OPEN. Subsumed by `/sprint-planning` Phase 4 — use this only when you need to set OPEN by hand (e.g. PLANNING sprint that pre-existed the new workflow).
 ---
 
-# Instructions for starting a new sprint
+# /sprint-start
 
-Follow the following steps to update the sprint section of [the backlog](../../../docs/backlog.md):
+> **Manual override.** Under the SDLC workflow (see
+> [sdlc-workflow-guide.md §5.1](../../guides/sdlc-workflow-guide.md#51-sprint-planning--interactive-main-conversation)),
+> sprints are taken from PLANNING to OPEN automatically by Phase 4 of
+> `/sprint-planning`, after grooming and planning subagents have run
+> and the operator has accepted the plans. Use this skill only when
+> you need to flip the status by hand — e.g. a sprint that pre-existed
+> the new workflow, or when recovering from an aborted run.
 
-1. If there is currently an open sprint (status=OPEN), refuse to start a new one
-2. Clarify the sprint to be started
-    * Look for the sprint, which is still in PLANNING state. If there are more of those, pick the oldest one.
-    * Display the fields in the sprint as documented:
-        * ID
-        * Main goal
-        * Additional goals
-        * Success criteria
-        * Estimated duration
-        * Table of tasks which are in this sprint
-            * Task ID
-            * Task type
-            * Priority
-            * Short name
-3. Once confirmed, make the backlog changes:
-   * Set Sprint Status to `OPEN`
-   * Set the Sprint Start date to today's date (YYYY-MM-DD)
-4. Present the changes made for the approval
-5. Fix any issues that may arise and present the change again for approval. Repeat until the change is approved
-6. Upon approval, validate the backlog structure and consistency (/backlog-validation), then commit and push the backlog changes
+Follow these steps to update the sprint section of [the backlog](../../../docs/backlog.md):
 
-# References
+1. If a sprint is currently `OPEN`, refuse to start a new one. (Close
+   it via `/sprint-review` first.)
+2. Identify the sprint to start:
+   - Look for the sprint in `PLANNING` state. If multiple, pick the
+     oldest.
+   - Display its fields per [backlog-structure.md](../../guides/backlog-structure.md):
+     ID, Main goal, Additional goals, Success criteria, Estimated
+     duration, and the table of tasks (ID, type, priority, short name).
+3. Once the operator confirms, update the backlog:
+   - Set the sprint's `Status` to `OPEN`.
+   - Set the sprint's `Start date` to today (UTC, `YYYY-MM-DD`).
+4. Present the change for approval. Iterate until approved.
+5. Validate the backlog (`/backlog-validation`).
+6. Commit and push the backlog change.
 
-* [The backlog](../../../docs/backlog.md)
-* [Backlog structure guide](../../guides/backlog-structure.md)
-* Skills to maintain the backlog:
-    * /backlog-management
-    * /backlog-validation
-* Skills to manage MD files (including the backlog):
-    * /md-file-editing
+## See also
+
+- [SDLC workflow guide §5.1 — sprint planning](../../guides/sdlc-workflow-guide.md#51-sprint-planning--interactive-main-conversation)
+- Normal flow: `/sprint-planning` (replaces this skill end-to-end)
+- [Backlog structure guide](../../guides/backlog-structure.md)
+- Related: `/backlog-management`, `/backlog-validation`,
+  `/md-file-editing`

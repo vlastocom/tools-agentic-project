@@ -1,7 +1,22 @@
 ---
 name: sprint-management
-description: Use this skill to add or remove tasks to a sprint.
+description: Use this skill to add or remove tasks from an existing sprint mid-flight. Useful for scope change, rework tasks added during `/sprint-review`, or pulling tasks out that should not have been included.
 ---
+
+> **Where this fits in the SDLC workflow.** Sprint scope is normally
+> set during `/sprint-planning` (Phases 1–3) and is not expected to
+> change once the sprint is `OPEN`. The two legitimate mid-flight
+> changes this skill handles:
+>
+> - **Adding a rework task** during `/sprint-review` Step 4 (operator
+>   directs rework on a wrapped task; the rework task lands here for
+>   inclusion in the current sprint or a follow-up).
+> - **Removing or replacing a task** that turns out wrong-shaped after
+>   the sprint opened — the operator decides; this skill executes the
+>   backlog edits.
+>
+> See [SDLC workflow guide §5.5](../../guides/sdlc-workflow-guide.md#55-sprint-review--interactive-main-conversation)
+> for the rework path.
 
 # Instructions for adding new tasks to a sprint
 
@@ -66,6 +81,7 @@ Follow these steps strictly to remove tasks from a sprint:
 8. Upon approval, validate the backlog structure and consistency (/backlog-validation), then commit and push the backlog changes
 
 # References
+* [SDLC workflow guide §5.5 — sprint review and rework path](../../guides/sdlc-workflow-guide.md#55-sprint-review--interactive-main-conversation)
 * [The backlog](../../../docs/backlog.md)
 * [Backlog structure guide](../../guides/backlog-structure.md)
 * Skills to maintain the backlog:
@@ -73,6 +89,10 @@ Follow these steps strictly to remove tasks from a sprint:
     * /backlog-validation
 * Skills to manage MD files (including the backlog):
     * /md-file-editing
-* Skills to manage sprints:
-    * /sprint-start
-    * /sprint-close
+* Sprint orchestration skills:
+    * /sprint-planning (sets initial scope; OPEN at end of Phase 4)
+    * /sprint-implementation (unattended orchestrator)
+    * /sprint-review (rework path lives here)
+* Manual overrides (use only when the orchestration skills do not fit):
+    * /sprint-start (flip PLANNING → OPEN by hand)
+    * /sprint-close (flip OPEN → CLOSED by hand)
