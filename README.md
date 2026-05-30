@@ -53,3 +53,18 @@ the toolkit directly (as opposed to working on a consumer project).
 Battle-hardened in nest and taskdb. Skills, guides and the SDLC workflow
 are stable. New skills and guides are added as patterns prove themselves
 in real projects.
+
+## Planned additions
+
+- **Headless inspection gate in `/sprint-review`** —
+  [Qodana](https://www.jetbrains.com/qodana/) wired as a once-per-sprint
+  static-analysis pass, with SARIF + HTML report living alongside the
+  per-sprint coverage summary. Closes the gap where IntelliJ-only
+  inspections (`DataFlowIssue`, `ThrowableNotThrown`,
+  `SameParameterValue`, override-contract weakening, etc.) currently
+  only surface in the operator's IDE and are invisible to the
+  orchestrator agent. Patterned in taskdb (OPS-10-0001); the generic
+  skill + guide updates fold back here once the taskdb-side
+  implementation is settled.
+- _(Future entries land here when a consumer project prototypes a
+  cross-cutting pattern worth promoting back.)_
