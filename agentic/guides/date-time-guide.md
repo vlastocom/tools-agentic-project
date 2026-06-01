@@ -62,12 +62,26 @@ behaves identically:
 ```yaml
 spring:
   jackson:
-    serialization:
-      write-dates-as-timestamps: false
-    deserialization:
-      adjust-dates-to-context-time-zone: false
+    datatype:
+      datetime:
+        write-dates-as-timestamps: false
+        adjust-dates-to-context-time-zone: false
     time-zone: UTC
 ```
+
+In Spring Boot 4 / Jackson 3 the `write-dates-as-timestamps` and
+`adjust-dates-to-context-time-zone` toggles moved from
+`SerializationFeature` / `DeserializationFeature` (Jackson 2.x) to
+`tools.jackson.databind.cfg.DateTimeFeature`, surfaced by Spring Boot
+under `spring.jackson.datatype.datetime.*`. Both happen to default to
+`false` in Jackson 3, but spelling them out as above keeps the policy
+discoverable and acts as a regression-prevention guard.
+`spring.jackson.time-zone` remains a top-level key.
+
+For Spring Boot 3 / Jackson 2 the legacy keys
+(`spring.jackson.serialization.write-dates-as-timestamps`,
+`spring.jackson.deserialization.adjust-dates-to-context-time-zone`)
+still apply.
 
 With this config Spring Boot serialises `OffsetDateTime` as an ISO 8601 string
 (`2025-03-12T14:30:00Z`) and `LocalDate` as `2025-03-12`.

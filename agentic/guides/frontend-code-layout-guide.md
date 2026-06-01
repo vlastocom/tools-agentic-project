@@ -1,11 +1,21 @@
+---
+stack: vite-react-typescript
+applies-to: Vite + React + TypeScript SPAs
+---
+
 # Frontend code layout guide
+
+**Applicability:** Vite + React + TypeScript SPA. If your project's
+frontend is on a different stack (Next.js, Remix, SvelteKit, Solid,
+plain HTML, no frontend at all), **delete this file at adoption time**
+and replace with the stack-specific equivalent.
 
 This guide defines how the project's React SPA is organised: the source tree, where
 unit / integration / E2E tests live, environment-specific build modes, and the
 supporting tooling (Vite, Vitest, Playwright, ESLint, TypeScript).
 
 It applies to any Vite + React + TypeScript project in this organisation; the
-specific versions (React 19.2, Vite 8, Vitest 4.1, Playwright 1.59, TS 5.9) are the
+specific versions (React 19.2, Vite 8, Vitest 4.1, Playwright 1.59, TS 5.9) are
 the current project's values, kept current in
 [infrastructure-design.md §20.1](../../docs/infrastructure-design.md).
 

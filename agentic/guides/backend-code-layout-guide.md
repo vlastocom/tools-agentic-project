@@ -1,4 +1,14 @@
+---
+stack: spring-boot-gradle-java
+applies-to: Spring Boot + Gradle + Java projects
+---
+
 # Backend code layout guide
+
+**Applicability:** Spring Boot + Gradle + Java backend. If your project's
+backend is on a different stack (Node + Express, Python + FastAPI, Go +
+chi, etc.), **delete this file at adoption time** and replace with the
+stack-specific equivalent.
 
 This guide defines how the project's Spring Boot backend is organised: the Gradle
 source-set layout, how `main`, `test`, `integrationTest` and `testFixtures` relate,
@@ -6,8 +16,8 @@ the package-by-layer structure inside each source set, and the supporting build
 configuration (JaCoCo coverage, Mockito agent, JVM options).
 
 It applies to any Spring Boot / Java project in this organisation; the specifics
-below (package names, Gradle version, Spring Boot version) are the the current project's values and
-kept current in [infrastructure-design.md §20.1](../../docs/infrastructure-design.md).
+below (package names, Gradle version, Spring Boot version) are the current project's
+values and kept current in [infrastructure-design.md §20.1](../../docs/infrastructure-design.md).
 
 ## Why four source sets
 

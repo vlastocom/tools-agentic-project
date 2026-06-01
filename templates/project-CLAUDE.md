@@ -21,28 +21,35 @@ EXISTS. Derived from the README; edit both in sync.>
 
 1. Explicitly grant yourself [permissions](docs/permissions.md)
 2. Follow the [spelling and grammar rules](agentic/guides/spelling-and-grammar-rules.md)
-3. Follow the [SDLC workflow guide](agentic/guides/sdlc-workflow-guide.md) —
+3. Run every diff through the [code-quality checklist](agentic/guides/code-quality-checklist.md)
+   before declaring work done — this is the consolidated catch-net for
+   the patterns that have historically drifted (unused imports, long
+   sentences, dangling doc-comments, stale class refs, NPE-prone chains,
+   magic strings, hand-rolled serialisation, etc.). The
+   [code-reviewer](agentic/agents/code-reviewer.md) treats every miss as
+   at-least a `should-fix`
+4. Follow the [SDLC workflow guide](agentic/guides/sdlc-workflow-guide.md) —
    this defines the three-mode cadence (plan / implement / review), the
    artefact taxonomy, the stop-and-ask contract, the TDD rule, and the
    skill/subagent inventory this project uses
-4. Make yourself acquainted with [skills available to you](agentic/guides/skills-overview.md)
-5. Maintain the [backlog](docs/backlog.md) per the [backlog structure](agentic/guides/backlog-structure.md)
-6. Follow the [database scripts guide](agentic/guides/database-scripts-guide.md)
+5. Make yourself acquainted with [skills available to you](agentic/guides/skills-overview.md)
+6. Maintain the [backlog](docs/backlog.md) per the [backlog structure](agentic/guides/backlog-structure.md)
+7. Follow the [database scripts guide](agentic/guides/database-scripts-guide.md)
    when writing or reviewing SQL, schema migrations and seed data
    *(remove if the project has no database)*
-7. Follow the [date and time guide](agentic/guides/date-time-guide.md) for
+8. Follow the [date and time guide](agentic/guides/date-time-guide.md) for
    every date or time value across the database, API, and front end
-8. Follow the [testing guide](agentic/guides/testing-guide.md) when writing
+9. Follow the [testing guide](agentic/guides/testing-guide.md) when writing
    or reviewing unit, integration, or end-to-end tests
-9. Follow the [backend code layout guide](agentic/guides/backend-code-layout-guide.md)
-   for the Gradle / Java / Spring Boot source-set layout, package-by-layer
-   structure, and build configuration
-   *(remove or replace if the project's backend uses a different stack)*
-10. Follow the [frontend code layout guide](agentic/guides/frontend-code-layout-guide.md)
+10. Follow the [backend code layout guide](agentic/guides/backend-code-layout-guide.md)
+    for the Gradle / Java / Spring Boot source-set layout, package-by-layer
+    structure, and build configuration
+    *(remove or replace if the project's backend uses a different stack)*
+11. Follow the [frontend code layout guide](agentic/guides/frontend-code-layout-guide.md)
     for the React SPA source tree, test layout, environment modes and
     tooling (Vite, Vitest, Playwright, ESLint, TypeScript)
     *(remove or replace if the project has no React front end)*
-11. Follow the [local development environment guide](agentic/guides/local-development-environment-guide.md)
+12. Follow the [local development environment guide](agentic/guides/local-development-environment-guide.md)
     for first-time developer setup, secrets bootstrap and IntelliJ run
     configurations
 

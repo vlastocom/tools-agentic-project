@@ -104,6 +104,30 @@ chooses:
 
 Once the operator says "accept the sprint":
 
+**Hard gate before any close action.** Re-read
+`docs/sprints/<sprint-id>.coverage.md` `## E2E` section. The sprint
+**MUST NOT** be marked CLOSED if any of the following is true:
+
+- Any E2E spec listed has status `fail`, `error`, `skip`, `@skip`,
+  `@skip.fixme`, or `@only`.
+- Any E2E spec recorded in a `.complete.md` `## Test outcomes`
+  block has a `fail`, `error`, or `skip` outcome that hasn't been
+  superseded by a green re-run in the same sprint.
+- The coverage summary's `## E2E` block is empty AND the sprint
+  introduced or changed any UI ↔ API surface (per the planner's
+  trigger list in `agentic/agents/task-planner.md` — including
+  response shape, header semantics, error contract, status-code
+  mapping changes).
+
+If any of those is true, **refuse to mark CLOSED**. Surface the
+specific failing / missing specs to the operator and route them to
+the rework path (Step 4). The operator may override only via the
+manual `/sprint-close --force` escape hatch (which itself records
+the override and the offending specs in the Decision log as a
+deliberate deviation — sdlc-workflow-guide §6.4).
+
+If all gates pass:
+
 1. Set the sprint's Status from `OPEN` to `CLOSED` in
    `docs/backlog.md`. Set End date to today (UTC).
 2. Append a final summary entry to the sprint log's Decision log:

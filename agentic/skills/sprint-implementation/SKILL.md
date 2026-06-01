@@ -104,21 +104,101 @@ Concrete steps:
      produces new must-fix items, mark the task `Failed-out` in the
      sprint log with reason "review failed three rounds", stop the
      pipeline for this task, and continue with the next.
-6. **task-wrapper** — same shape. The wrapper gates on every
-   should-fix and consider being either fixed or rationalised per
-   §5.4.3; it returns `NOT READY` if not, in which case route the
-   task back to step 5 once.
+6. **task-wrapper** — same shape. The wrapper gates on:
+   - every must-fix being fixed,
+   - every should-fix being either fixed or rationalised in
+     `## Deviations` (§5.4.3),
+   - every consider being either fixed or rationalised in
+     `## Decisions` (§5.4.3),
+   - **the task's `## Test outcomes` recording zero failing and zero
+     skipped tests across all three layers (unit, integration, E2E)**,
+   - **AND the full sprint-wide E2E suite being green** — not just
+     the spec(s) this task touched. A downstream task can break a
+     sibling's spec, and the wrapper must catch it before the task
+     wraps ([sdlc-workflow-guide §6.4](../../guides/sdlc-workflow-guide.md#64-all-tests-must-pass-before-the-task-wraps)).
+
+   It returns `NOT READY` if any gate fails, in which case route the
+   task back to step 5 once. If a transitional red is genuinely
+   unavoidable (rare cross-task ordering), the operator may approve
+   wrap via a documented `## Deviations` entry pointing at the
+   same-sprint rework task that re-greens it.
 7. On wrapper success, move task to `Completed:` in the sprint log.
+8. **Worktree clean-up — after every successful merge.** Once a
+   worktree branch has been merged into `sprint-<id>` (and the merge
+   commit is on the sprint branch), the orchestrator MUST immediately:
+   ```bash
+   git worktree unlock  .claude/worktrees/<name>     # the Agent tool's
+                                                     # isolation lock
+   git worktree remove --force .claude/worktrees/<name>
+   git branch -D worktree-<name>
+   ```
+   Each subagent leaves behind one worktree directory (~10–20 MB) and
+   one branch ref. Across a sprint with many tasks × 5 pipeline phases
+   plus rework loops, that's hundreds of worktrees and gigabytes of
+   redundant disk by sprint end. Cleaning on the merge edge keeps the
+   working tree tidy and `git worktree list` readable. The merged
+   content is already on the sprint branch — the worktree and branch
+   carry no unique work after the merge succeeds, so removal is
+   information-preserving.
+
+   Failure modes:
+   - **Dirty worktree** (uncommitted edits remaining): `--force`
+     removes them. Anything not yet committed at merge time has
+     already lost the pipeline's race — the merge took the committed
+     tree, not the dirty diff. If you suspect lost work, surface to
+     the operator before `--force`.
+   - **Locked worktree**: the Agent tool with `isolation: "worktree"`
+     marks each worktree locked so it survives session boundaries.
+     `git worktree unlock <path>` must run first, otherwise
+     `worktree remove` errors with "cannot remove a locked working
+     tree".
+   - **Branch checked-out elsewhere**: shouldn't happen if you
+     removed the worktree first; if it does, prune
+     (`git worktree prune`) then retry the branch delete.
 
 ## Parallelism rules
 
-- Two tasks may run in parallel **iff** none of them list each other in
-  `## Plan → ### Dependencies`.
+The dependency graph often permits more parallelism than is optimal.
+Aggressive parallelism multiplies coordination cost — shared-file
+merge conflicts, cross-task drift discovered late, the
+orchestrator-as-bottleneck processing many parallel summaries — and
+can burn through a project's weekly token budget faster than it saves
+wall-clock time. Per-project tuning is expected.
+
+**Default guidance** (a project's own sprint-implementation skill may
+tighten or relax this):
+
+1. **First wave of any new sprint runs sequentially** (one task at a
+   time through its full pipeline) until 3–5 tasks have merged
+   cleanly. This establishes the merge baseline and surfaces any
+   cross-cutting infrastructure issues early before they multiply.
+2. **Same-epic tasks serialise**, regardless of declared dependencies.
+   Sibling tasks in an epic share file scope (the same module, the
+   same test class, the same backlog detail block) and parallelism
+   produces conflicts that cost more than the saved wall-clock.
+3. **Different epics + different layers can parallelise, up to a
+   small ceiling** (3 agents is a reasonable starting default;
+   single-thread is also a perfectly acceptable mode for operators
+   who value reliability over speed).
+4. **Wave-validate between batches.** After each parallel batch
+   completes (all agents returned, all merges clean), the
+   orchestrator runs the project's smoke E2E. Green → queue next
+   wave; red → diagnose and either fix-forward or fail-out the
+   offending task before continuing.
+
+**Underlying mechanic (unchanged):**
+
+- Two tasks may run in parallel **iff** none of them list each other
+  in `## Plan → ### Dependencies` AND the same-epic rule above
+  permits AND the agent ceiling allows.
 - All subagents run with `isolation: "worktree"` — separate working
   trees, merge back on success.
-- If a worktree merge fails (overlapping changes that can't auto-merge),
-  stop both tasks, write the conflict to the sprint log's Decision log,
-  and surface to the operator. Do not attempt to resolve.
+- If a worktree merge fails (overlapping changes that can't
+  auto-merge), stop both tasks, write the conflict to the sprint
+  log's Decision log, and surface to the operator. Do not attempt to
+  resolve. **Note:** unlike the successful-merge path (step 8 above),
+  a failed merge leaves the worktree IN PLACE — the operator may need
+  to inspect it during resolution.
 
 ## Termination — produce the coverage summary
 

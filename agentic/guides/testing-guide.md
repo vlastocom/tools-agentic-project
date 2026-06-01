@@ -1,7 +1,11 @@
 # Testing Guide
 
-Comprehensive testing guide for the Nest Finance Management System, covering both backend
-(Java/Spring Boot) and frontend (React/TypeScript) testing.
+Comprehensive testing guide for projects on this template, covering both backend
+(Java/Spring Boot) and frontend (React/TypeScript) testing. Adapt the
+stack-specific sections (Vitest, JUnit, Testcontainers, Playwright) to your
+project's actual choices; the layered structure (unit → integration → E2E) and
+the per-task discipline ([SDLC §6 — Tests per task](sdlc-workflow-guide.md#6-tests-per-task))
+are stack-agnostic.
 
 ---
 

@@ -26,7 +26,7 @@ eyes** on a task's diff. You have not lived inside the implementation
 2. **Read the diff cold.** No skimming. Examine every change — even the
    small ones. Use `Bash` with `git diff`, `git log`, `git show` as
    needed.
-3. **Review against three quality gates:**
+3. **Review against four quality gates:**
    - **Correctness** — does the code do what the plan says? Does it
      do it in a safe, race-free, side-effect-aware way? Are edge cases
      handled or deliberately deferred with a rationale?
@@ -35,8 +35,19 @@ eyes** on a task's diff. You have not lived inside the implementation
      branches that matter? Are they readable?
    - **Conformance** — does the diff respect the project's code-layout
      guides, naming conventions, date-time rules, testing conventions?
+   - **Hygiene** — for every file the diff touches, run through the
+     [code-quality checklist](../guides/code-quality-checklist.md). This
+     gate exists because of repeated drift: the same patterns keep
+     slipping into reviewed-and-merged work (unused imports, long
+     sentences, dangling doc-comments, stale class refs, NPE-prone
+     chains, magic strings, hand-rolled JSON serialisation, dead vars).
+     The checklist is the bar; "would the linter / IDE flag this?" is
+     the question to ask at every line.
 4. **Classify every finding** into `must-fix` / `should-fix` /
-   `consider` (definitions below).
+   `consider` (definitions below). A hygiene-gate miss is at-least a
+   `should-fix`; a correctness-impacting hygiene miss (NPE-prone chain,
+   SQL injection vector, deprecated API that will be removed) is a
+   `must-fix`.
 5. **Append `## Review notes`** to the task doc with your findings,
    grouped by class. Each finding cites a file and line where
    relevant.
@@ -92,11 +103,17 @@ Your run succeeds when `## Review notes` exists in the task doc with:
 
 ## See also
 
+- [code-quality-checklist.md](../guides/code-quality-checklist.md) —
+  the hygiene-gate punch list you run for every file the diff touches
+- [spelling-and-grammar-rules.md](../guides/spelling-and-grammar-rules.md) —
+  the authoritative spelling/grammar rules (sentence length, British
+  variant table, conjunctive-adverb commas, `§ "Section"` spacing)
 - [sdlc-workflow-guide.md](../guides/sdlc-workflow-guide.md) §5.4 —
   your role in `/sprint-implementation`, the full finding taxonomy,
   the re-review policy
 - [testing-guide.md](../guides/testing-guide.md) — what passing test
-  coverage looks like
+  coverage looks like, plus the § "Test-code quality" section mirroring
+  the test-specific items in the hygiene gate
 - [backend-code-layout-guide.md](../guides/backend-code-layout-guide.md),
   [frontend-code-layout-guide.md](../guides/frontend-code-layout-guide.md),
   [database-scripts-guide.md](../guides/database-scripts-guide.md),

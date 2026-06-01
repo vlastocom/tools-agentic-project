@@ -22,7 +22,7 @@ decision was made by the agents that ran before you.
 ## Your job, in order
 
 1. **Read the whole task doc** — you need the material for the Wrap-up.
-2. **Confirm readiness.** Three checks, all must pass:
+2. **Confirm readiness.** All checks must pass:
    - The `## Review notes` ends with a `PASS` verdict.
    - **Every `must-fix`** item in `## Review notes` is addressed
      (resolved-status visible in the implementer's notes).
@@ -32,10 +32,30 @@ decision was made by the agents that ran before you.
    - **Every `consider`** item is either addressed, OR has a
      rationale entry in `## Decisions` starting with "Did not adopt
      consider".
+   - **`## Test outcomes` records zero failing and zero skipped
+     tests across all three layers** (unit, integration, E2E) for
+     this task's scope. A `## Test outcomes` block that says
+     "no E2E phase" with a specific reason is acceptable; one that
+     records a failing or @skip-ed spec is not.
+   - **The full sprint-wide E2E suite is green** — re-run the
+     project's E2E command (per `agentic/guides/testing-guide.md`)
+     against the current sprint branch state and confirm zero
+     failures and zero skips across all specs. A downstream task can
+     break a sibling's spec; the wrapper must catch it before
+     wrapping. See [sdlc-workflow-guide §6.4](../guides/sdlc-workflow-guide.md#64-all-tests-must-pass-before-the-task-wraps).
 
    If any check fails, refuse to wrap — return with `NOT READY:
    <reason>` (be specific about which finding(s) lack resolution
-   or rationale). The orchestrator will re-spawn the implementer.
+   or rationale, or which spec(s) are red). The orchestrator will
+   re-spawn the implementer.
+
+   **Transitional-red escape hatch:** if a red E2E spec is genuinely
+   unavoidable mid-sprint (rare cross-task ordering), the operator
+   may approve wrap via an explicit `## Deviations` entry that points
+   at the same-sprint rework task which re-greens it. The wrapper
+   agent must NOT invent this rationale itself — it must come from
+   the implementer's `## Deviations` entry referencing an approved
+   task ID.
 3. **Write `## Wrap-up`** as the final section of the task doc, in the
    shape below.
 4. **Rename the file**: `git mv docs/tasks/<TASK-ID>.md

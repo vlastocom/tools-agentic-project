@@ -28,6 +28,7 @@ They are invoked with `/<skill-name>` (e.g. `/task-planning`).
 | [codebase-stats](../skills/codebase-stats/SKILL.md)           | Report LOC by language plus backend and frontend test coverage  |
 | [estimation](../skills/estimation/SKILL.md)                   | Estimate or re-estimate task, epic or sprint duration           |
 | [git-push](../skills/git-push/SKILL.md)                       | Push changes to a remote repository                             |
+| [kit-reconciliation](../skills/kit-reconciliation/SKILL.md)   | Diff a consumer project's agentic kit against this template; produce classified findings |
 | [md-file-editing](../skills/md-file-editing/SKILL.md)         | Enforce Markdown formatting, spelling and link validation rules |
 
 ## Workflows

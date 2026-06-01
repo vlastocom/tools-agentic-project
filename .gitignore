@@ -34,8 +34,8 @@ __pycache__/
 
 # ======================================================================
 # Claude Code — commit the symlinks + a handful of shared files.
-# Everything else under .claude/ (settings.local.json, per-machine state)
-# stays local.
+# Everything else under .claude/ (settings.local.json, per-machine state,
+# `worktrees/` from the Agent tool's isolation mechanism) stays local.
 # ======================================================================
 # Note: a trailing-slash ignore on the parent (`.claude/`) would make
 # `!` re-includes ineffective — git refuses to re-examine files inside
@@ -52,11 +52,23 @@ __pycache__/
 !.claude/hooks
 !.claude/scripts
 !.claude/skills
+# The Agent tool with `isolation: "worktree"` creates ephemeral
+# worktree clones under .claude/worktrees/. Per-machine, churning,
+# never committed. The catch-all `.claude/*` above already covers
+# this — listing it explicitly for clarity to a new reader.
+.claude/worktrees/
 
 # ======================================================================
-# Secrets — never commit
+# Secrets — never commit values
 # ======================================================================
-/.secrets/
+# The .secrets/ directory itself is committed so README + .example
+# placeholders ship with the project (per
+# agentic/guides/local-development-environment-guide.md). Individual
+# value files inside it are ignored.
+/.secrets/*
+!/.secrets/README.md
+!/.secrets/.gitignore
+!/.secrets/*.example
 /secrets/
 *.pem
 *.key

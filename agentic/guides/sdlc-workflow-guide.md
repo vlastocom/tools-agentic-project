@@ -247,6 +247,45 @@ each suite's report format and path. Each project documents its
 specific invocation in `docs/` (typically alongside its testing guide).
 The orchestrator runs it as part of producing `<sprint-id>.coverage.md`.
 
+### 3.7 Operator playbooks
+
+`docs/playbooks/` — copy-pasteable runbooks for **operations**
+(disaster recovery, one-off migrations, backup restore drills,
+infrastructure provisioning). Distinct from design docs (which
+explain **why**) and task docs (which capture **what changed**):
+playbooks capture **what to type** when the operator needs to
+execute a procedure on a live system.
+
+A playbook is the natural home for:
+
+- Recovery procedures referenced from design docs as "pending
+  procedure" (e.g. `infrastructure-design.md` § "Backups" pointing
+  at a future `db-restore.md`).
+- One-time migrations that need to be rehearsed in stage and run
+  in production (e.g. `initial-migration.md` for a legacy-data
+  import).
+- Step-by-step disaster-recovery flows where the operator follows
+  the script under stress and cannot afford to re-derive the
+  sequence from design docs.
+
+Each playbook is **the deliverable** for a corresponding task in
+the backlog (typically marked as such in the relevant design doc's
+"pending work" list). Once written, it lives alongside the design
+docs as a long-lived operator artefact — not retired at sprint
+close.
+
+Structure conventions:
+
+- Opens with a **"When to use which path"** table when there are
+  multiple recovery / migration paths covering distinct failure
+  shapes.
+- Treats every code block as a **literal command** the operator
+  pastes; placeholders are clearly demarcated (`<YYYY-MM-DD>`,
+  `<host>`, `<tag>`).
+- Cross-references design-doc sections explicitly (`infra § "..."`,
+  `deploy § "..."`) so the operator can fall back to design intent
+  when a step doesn't quite fit reality.
+
 ## 4. Skills and subagents inventory
 
 Two primitives in Claude Code:
@@ -594,7 +633,9 @@ When the operator directs rework on `<original-id>`:
 Rework tasks list in the sprint log under `## Tasks reworked` (§3.4)
 and become part of the sprint's record.
 
-## 6. TDD rule
+## 6. Tests per task
+
+### 6.1 TDD rule
 
 **Red-green is mandatory for any task that introduces testable behaviour.**
 In practice:
@@ -615,6 +656,63 @@ In practice:
 
 The implementation agent is briefed with this rule. A reviewer that sees a
 non-exempt task with tests written after the fact flags it as a **must-fix**.
+
+### 6.2 Tests live in the task that introduces or changes the surface
+
+Every task carries its own tests across **all three layers** (unit,
+integration, E2E — see §5.2 and the planner's `## Test strategy`
+section). Tests for a task are NOT deferred to a downstream "test
+task".
+
+**Dedicated test tasks are forbidden during planning.** A backlog
+candidate with a short name like *"Integration tests for FOO"*,
+*"Unit tests for BAR"*, *"E2E test for BAZ"*, *"Tests — concurrent X"*
+is a planning smell. Sprint-planning must refuse such candidates and
+fold their scope into the originating task (the task that introduces
+or changes the surface under test).
+
+**Why:** decoupling tests from the change that motivates them creates
+two documented failure modes:
+
+1. The implementing task wraps as "done" with no tests — false-positive
+   coverage. The downstream test task may slip out of the sprint, never
+   land, or land but expose bugs in the original task that the
+   implementer is no longer iterating on.
+2. The "test task" becomes a dumping ground for missed coverage and
+   stops being scoped — it grows during the sprint, blows its estimate,
+   and either fails-out or absorbs unrelated tests.
+
+If a task's plan reveals it cannot reasonably ship with its full
+three-layer test coverage (e.g. the integration target hasn't been
+built yet because of dependency ordering), the right answer is to
+**re-order the work** so the dependency lands first, not to split
+tests out.
+
+### 6.3 All three layers — unit, integration, E2E
+
+Per-task `## Test strategy` must explicitly name what each layer covers
+or why a layer is omitted. The E2E layer (per the planner's
+widest-flow rule) is the easiest to forget; the planner's prompt and
+the e2e-tester's brief both call it out. **E2E coverage is mandatory
+for any task that introduces OR CHANGES a UI ↔ API surface** —
+including response shape, header semantics, error contract,
+status-code mapping, or authentication contract changes — not just
+for tasks that add a new screen. See `agentic/agents/task-planner.md`
+§ "Test strategy" for the full trigger list.
+
+### 6.4 All tests must pass before the task wraps
+
+`task-wrapper` (per §5.2 step 7) refuses to wrap a task whose
+`## Test outcomes` records any failing or skipped test in any layer —
+including failures in the **full sprint-wide E2E suite**, not just the
+spec this task touched (a downstream task can break a sibling's spec).
+The orchestrator routes the task back to the implementer for a fix
+before re-attempting the wrap.
+
+If a transitional red state is genuinely unavoidable (rare — usually
+mid-sprint cross-task ordering), it must be documented under
+`## Deviations` with an explicit pointer to the task that re-greens
+it, AND the rework task must land in the same sprint (not deferred).
 
 ## 7. Stop-and-ask contract (detailed)
 

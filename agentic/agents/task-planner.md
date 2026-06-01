@@ -69,20 +69,58 @@ Bulleted list. Each item is independently verifiable. Include:
 ### Test strategy
 Per the testing-guide.md conventions, name three layers explicitly:
 
-1. **Unit tests** the implementer should add.
-2. **Integration tests** the integration-tester should add.
+1. **Unit tests** the implementer should add. These belong in THIS
+   task, not a downstream "test task" — dedicated test tasks are
+   forbidden during planning
+   ([sdlc-workflow-guide §6.2](../guides/sdlc-workflow-guide.md#62-tests-live-in-the-task-that-introduces-or-changes-the-surface)).
+2. **Integration tests** the implementer should add (the
+   integration-tester subagent helps with framework-specific
+   plumbing but the tests are this task's deliverable).
 3. **E2E coverage** — applying the **widest-flow rule**: identify the
    widest existing E2E spec that this task's functionality can
    plausibly extend, **or** if no existing spec fits, name the new
-   spec or sister-branch this task should create. Be explicit. Use
-   one of these directives verbatim:
+   spec or sister-branch this task should create.
+
+   **When E2E coverage is required** — when the task introduces OR
+   CHANGES any of:
+   - A new UI screen / component visible at a URL path.
+   - A new HTTP endpoint, OR a change to an existing endpoint's
+     **request contract** (URL, method, path-params, query-params,
+     request body shape, required headers).
+   - A change to an existing endpoint's **response contract** (status
+     code, response body shape, error envelope, response headers
+     including trace / correlation IDs).
+   - A change to **authentication or actor-identity semantics** on
+     any endpoint (header names, who can call, what 4xx surfaces).
+   - A change that affects how the UI **navigates** between screens
+     (route additions, redirects, deep-link behaviour).
+
+   In other words: not just "new user-visible behaviour", but any
+   change at the UI ↔ API boundary that a downstream consumer could
+   observe. Internal refactors that preserve all wire contracts are
+   exempt.
+
+   Use one of these directives verbatim in `## Test strategy`:
    - `extend <existing-spec-name> with: <one-line summary of the
      additional steps>`
    - `branch from <existing-spec-name> at <named step>; new spec
      <new-spec-name>; covering: <one-line summary>`
    - `write new <new-spec-name>; covering: <one-line summary>`
-   - `no E2E phase` — for tasks without user-visible behaviour
-     (pure backend services, scaffolding, config, infra)
+   - `no E2E phase — <one-line reason>` — only for tasks with no
+     UI ↔ API surface impact (pure backend services with no
+     controller, scaffolding, config, infra). The reason must be
+     specific; "no user-visible behaviour" alone is insufficient
+     (an internal API contract change has no user-visible behaviour
+     but still needs E2E).
+
+   Example of a NEW-screen task: `write new project-picker.spec.ts;
+   covering: load /, see the seeded project list, click a project,
+   URL becomes /<code>/`.
+
+   Example of a CHANGED-response-contract task: `extend
+   error-handling.spec.ts with: a 422 response now carries an
+   instance URL — assert the JSON body contains `instance` keyed
+   on the request path`.
 
    The point of the widest-flow rule is that an E2E spec evolves
    alongside the features that compose it — successive tasks extend

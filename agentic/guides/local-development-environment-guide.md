@@ -18,24 +18,32 @@ The pattern is designed around three forces:
 
 ```
 repo-root/
-├── .secrets/                   # gitignored; real secrets live here (one file per secret)
-│   ├── .gitignore              # "*\n!.gitignore\n!README.md\n!*.example" (narrow allowlist)
-│   ├── README.md               # committed; documents each secret
-│   └── db-creator.txt.example  # committed; placeholder value
-├── .run/                       # committed IntelliJ run configurations
-│   ├── README.md               # committed; documents every run config
+├── .secrets/                    # values gitignored; directory itself is committed
+│   ├── README.md                # committed; documents each secret
+│   ├── db-creator.txt.example   # committed; placeholder value
+│   └── db-creator.txt           # gitignored; real secret (one file per secret)
+├── .run/                        # committed IntelliJ run configurations
+│   ├── README.md                # committed; documents every run config
 │   ├── Local - Run API.run.xml
 │   ├── Local - Test API.run.xml
 │   ├── Util - Set build environment.run.xml
 │   └── …
 ├── scripts/
-│   ├── generate-secret.sh      # one file per secret, random value
-│   └── set-build-env.sh        # reads .secrets/*.txt → options.txt + gradle.properties.local
-├── options.txt                 # gitignored; generated; `-DFOO=bar` per secret
-├── gradle.properties.local     # gitignored; generated; `systemProp.FOO=bar` per secret
-├── build.gradle                # converts `systemProp.*` in the local file into test env vars
-└── .gitignore                  # excludes .secrets/, options.txt, gradle.properties.local, etc.
+│   ├── generate-secret.sh       # one file per secret, random value
+│   └── set-build-env.sh         # reads .secrets/*.txt → options.txt + gradle.properties.local
+├── options.txt                  # gitignored; generated; `-DFOO=bar` per secret
+├── gradle.properties.local      # gitignored; generated; `systemProp.FOO=bar` per secret
+├── build.gradle                 # converts `systemProp.*` in the local file into test env vars
+└── .gitignore                   # excludes .secrets/*, options.txt, gradle.properties.local, etc.
 ```
+
+The **directory is committed** (with `README.md` plus `*.example`
+placeholders) but each individual `<name>.txt` value file is
+gitignored at the root `.gitignore`. This is the pattern the
+worktree-bootstrap script ([setup-worktree.sh](../../scripts/setup-worktree.sh))
+relies on: it cannot link the parent `.secrets/` directory because
+the worktree already owns its tracked contents, so it links each
+gitignored value file individually via `link_file_if_missing`.
 
 ### How the three consumers receive the same secret
 
